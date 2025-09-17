@@ -2,6 +2,8 @@
 
 A lightweight and powerful JavaScript SDK for interacting with the Bitcoin SV (BSV) blockchain. This SDK provides a comprehensive set of tools for managing keys, signing messages, and performing various cryptographic operations.
 
+**Note**: As of version 1.2.0, this SDK has been migrated to the official `@bsv/sdk` to resolve a critical security vulnerability in its previous dependencies. It is now more secure and uses a modern, object-based API.
+
 ## Features
 
 - **BIP39 Mnemonic Support**: Generate and validate 24-word mnemonic phrases.
@@ -33,11 +35,11 @@ async function runExample() {
 
   // Sign a message
   const message = 'Hello, SmartLedger!';
-  const signature = await SmartLedger.signMessage(message, privateKey.toString());
-  console.log('Signature:', signature);
+  const signature = await SmartLedger.signMessage(message, privateKey);
+  console.log('Signature:', '[Signature Object]');
 
   // Verify the signature
-  const isValid = await SmartLedger.verifySignature(message, signature, publicKey.toString());
+  const isValid = await SmartLedger.verifySignature(message, signature, publicKey);
   console.log('Is signature valid?', isValid);
 }
 
@@ -50,13 +52,13 @@ runExample();
 - `generateMnemonic()`: Generates a new 24-word BIP39 mnemonic.
 - `validateMnemonic(mnemonic)`: Validates a mnemonic string. Returns `true` or `false`.
 - `mnemonicToSeedHex(mnemonic, [passphrase])`: Converts a mnemonic to a 512-bit seed (hex string).
-- `derivePath(mnemonic, path)`: Derives a key from a mnemonic using a standard derivation path (e.g., "m/44'/236'/0'/0/0"). Returns an object with `path`, `privateKey`, `publicKey`, and `wif`.
+- `derivePath(mnemonic, path)`: Derives a key from a mnemonic using a standard derivation path (e.g., "m/44'/236'/0'/0/0"). Returns an object with `path`, `privateKey` (object), `publicKey` (object), and `wif` (string).
 - `deriveStandardPaths(mnemonic)`: Derives keys for a set of standard paths.
 
 ### BSV Functions
 - `generateKeyPair()`: Generates a new BSV key pair. Returns an object with `privateKey` and `publicKey` objects.
-- `signMessage(message, privateKey)`: Signs a string message with a private key (WIF or hex string).
-- `verifySignature(message, signature, publicKey)`: Verifies a message signature with a public key string.
+- `signMessage(message, privateKey)`: Signs a string message with a `PrivateKey` object. Returns a `Signature` object.
+- `verifySignature(message, signature, publicKey)`: Verifies a message signature. Takes the message string, the `Signature` object, and the `PublicKey` object.
 - `isValidPrivateKey(privateKey)`: Checks if a private key string is valid.
 - `isValidPublicKey(publicKey)`: Checks if a public key string is valid.
 
