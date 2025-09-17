@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>BSV Mnemonic & Key Derivation Demo</title>
+  <script src="https://unpkg.com/bsv@2.0.10/dist/bsv.bundle.js"></script>
+</head>
+<body>
+  <h1>BSV Mnemonic / Key Derivation Demo</h1>
+  <button id="gen">Generate Wallet</button>
+  <pre id="output"></pre>
+
+  <script>
+    window.onload = () => {
+      const bsvjs = window.bsvjs;
+      const Buffer = bsvjs.deps.Buffer;
+
+      const out = (label, data) => {
+        document.getElementById("output").textContent += `${label}: ${data}\n`;
+      };
+
+      document.getElementById("gen").onclick = async () => {
+        document.getElementById("output").textContent = "";
+
+        const { Bip39, Bip32, PrivKey, PubKey, Address, Bsm, KeyPair } = bsvjs;
+
+        // 1. Generate mnemonic
+        const mnemonic = Bip39.fromRandom();
+        out("Mnemonic", mnemonic.toString());
+
+        // 2. Seed
+        const seed = await mnemonic.toSeed("");
+        out("Seed (hex)", seed.toString("hex"));
+
+        // 3. Master key
+        const master = Bip32.fromSeed(seed);
+        out("HD Master Key", master.toString());
+
+        // 4. Derive child (m/44'/236'/0'/0/0)
+        const child = master.derive("m/44'/236'/0'/0/0");
+        out("Child Key", child.toString());
+
+        // 5. Keys
+        const privKey = child.privKey;
+        out("Private WIF", privKey.toWif());
+
+        const pubKey = PubKey.fromPrivKey(privKey);
+        out("Public Key", pubKey.toString());
+
+        const address = Address.fromPubKey(pubKey).toString();
+        out("Address", address);
+
+        // 6. Sign/Verify message using Bsm
+        const msg = "Hello, BSV!";
+        const msgBuf = Buffer.from(msg);
+
+        // Wrap privKey in KeyPair
+        const keyPair = KeyPair.fromPrivKey(privKey);
+
+        // Signature (base64 string)
+        const sigStr = Bsm.sign(msgBuf, keyPair);
+        out("Message Signature (BSM)", sigStr);
+
+        // Verify (⚡ note: pass Address object, not string)
+        const verified = Bsm.verify(msgBuf, sigStr, Address.fromString(address));
+        out("Signature Verified", verified);
+      };
+    };
+  </script>
+</body>
+</html>

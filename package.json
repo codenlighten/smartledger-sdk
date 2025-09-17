@@ -1,0 +1,31 @@
+{
+  "name": "smartledger-sdk",
+  "version": "1.1.17",
+  "description": "A JavaScript SDK for interacting with the SmartLedger.",
+  "main": "dist/smartledger.js",
+  "files": [
+    "dist",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "build": "browserify src/index.js -o dist/smartledger.js -s SmartLedger"
+  },
+  "keywords": [
+    "bsv",
+    "smartledger",
+    "bitcoin"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "bsv": "^2.0.0",
+    "crypto-js": "^4.1.1",
+    "uuid": "^9.0.0",
+    "secrets.js-grempe": "^2.0.0"
+  },
+  "devDependencies": {
+    "browserify": "^17.0.0"
+  }
+}

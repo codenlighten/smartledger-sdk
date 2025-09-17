@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SmartLedger SDK Test Suite</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        padding: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .success {
+        color: green;
+        font-weight: bold;
+      }
+      .error {
+        color: red;
+        font-weight: bold;
+      }
+      .result {
+        margin-left: 20px;
+        font-family: monospace;
+        word-break: break-all;
+        background: #f5f5f5;
+        padding: 10px;
+        border-radius: 4px;
+      }
+      .test-section {
+        margin: 20px 0;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius: 4px;
+      }
+      h1 {
+        color: #333;
+        border-bottom: 2px solid #333;
+        padding-bottom: 10px;
+      }
+      .summary {
+        margin: 20px 0;
+        padding: 15px;
+        background: #f8f8f8;
+        border-radius: 4px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>SmartLedger SDK Test Suite</h1>
+    <div class="summary" id="summary"></div>
+    <div id="results"></div>
+
+    <script src="dist/smartledger.js"></script>
+    <script>
+      const results = document.getElementById("results");
+      const summary = document.getElementById("summary");
+      const testResults = [];
+      let successCount = 0;
+      let failureCount = 0;
+
+      async function runTest(name, testFn) {
+        try {
+          const result = await testFn();
+          successCount++;
+          testResults.push(`
+                    <div class="test-section">
+                        <p class="success">✅ ${name}</p>
+                        <p class="result">${result}</p>
+                    </div>
+                `);
+        } catch (error) {
+          failureCount++;
+          testResults.push(`
+                    <div class="test-section">
+                        <p class="error">❌ ${name} failed: ${error.message}</p>
+                    </div>
+                `);
+          console.error(name, error);
+        }
+      }
+
+      (async () => {
+        try {
+          // Test all major functionality
+          await runTest("Library Initialization", () => {
+            if (!SmartLedger) throw new Error("SmartLedger not loaded");
+            return "SmartLedger SDK loaded successfully";
+          });
+
+          await runTest("Encryption/Decryption", () => {
+            const msg = "Hello World";
+            const encrypted = SmartLedger.encrypt(msg, "test-key");
+            const decrypted = SmartLedger.decrypt(encrypted, "test-key");
+            if (decrypted !== msg)
+              throw new Error("Decryption result doesn't match original");
+            return `Original: "${msg}"<br>Encrypted: "${encrypted}"<br>Decrypted: "${decrypted}"`;
+          });
+
+          await runTest(
+            "BIP39 Mnemonic Generation and Validation",
+            async () => {
+              const mnemonic = SmartLedger.generateMnemonic();
+              console.log("Generated mnemonic:", mnemonic);
+
+              const isValid = SmartLedger.validateMnemonic(mnemonic);
+              if (!isValid) throw new Error("Generated mnemonic is invalid");
+
+              const seedHex = await SmartLedger.mnemonicToSeedHex(mnemonic);
+
+              const passphraseTest = "test passphrase";
+              const seedWithPassphrase = await SmartLedger.mnemonicToSeedHex(
+                mnemonic,
+                passphraseTest
+              );
+
+              return `
+                        Mnemonic (24 words): "${mnemonic}"<br>
+                        Validation: ${isValid ? "✅ Valid" : "❌ Invalid"}<br>
+                        Seed Hex (first 32 chars): "${seedHex.substring(
+                          0,
+                          32
+                        )}..."<br>
+                        Seed with Passphrase (first 32 chars): "${seedWithPassphrase.substring(
+                          0,
+                          32
+                        )}..."
+                    `;
+            }
+          );
+          await runTest("HD Wallet Derivation", async () => {
+            // Generate a mnemonic
+            const mnemonic = SmartLedger.generateMnemonic();
+            console.log("Test mnemonic:", mnemonic);
+
+            // Derive a single path
+            const singlePath = "m/44'/236'/0'/0/0";
+            const derived = await SmartLedger.derivePath(mnemonic, singlePath);
+            console.log("Single path derivation:", derived);
+
+            // Derive all standard paths
+            const paths = await SmartLedger.deriveStandardPaths(mnemonic);
+            console.log("Derived paths:", paths);
+            console.log("Number of derived paths:", paths.length);
+
+            return `
+        Mnemonic: "${mnemonic}"<br>
+        Single Path (m/44'/236'/0'/0/0):<br>
+        - Private Key: "${derived.privateKey.substring(0, 20)}..."<br>
+        - Public Key: "${derived.publicKey.substring(0, 20)}..."<br>
+        - WIF: "${derived.wif}"<br>
+        <br>
+        Total Derived Paths: ${paths.length}<br>
+        First Path: "${paths[0].path}"<br>
+        Last Path: "${paths[paths.length - 1].path}"<br>
+    `;
+          });
+          await runTest("Hashing Operations", () => {
+            const data = "test data";
+            const hashSHA256 = SmartLedger.hash(data, "SHA256");
+            const hashSHA512 = SmartLedger.hash(data, "SHA512");
+            const hashMD5 = SmartLedger.hash(data, "MD5");
+            return `Input: "${data}"<br>
+                        SHA256: ${hashSHA256}<br>
+                        SHA512: ${hashSHA512}<br>
+                        MD5: ${hashMD5}`;
+          });
+
+          await runTest("UUID Generation", () => {
+            const domain = "test.example.com";
+            const uuid = SmartLedger.generateUUID(domain);
+            return `Domain: "${domain}"<br>Generated UUID: ${uuid}`;
+          });
+
+          await runTest("Base64 Encoding/Decoding", () => {
+            const original = "Test string for base64";
+            const encoded = SmartLedger.base64Encode(original);
+            const decoded = SmartLedger.base64Decode(encoded);
+            if (decoded !== original)
+              throw new Error("Decoded result doesn't match original");
+            return `Original: "${original}"<br>Encoded: "${encoded}"<br>Decoded: "${decoded}"`;
+          });
+
+          await runTest("BSV Key Generation", () => {
+            const keyPair = SmartLedger.generateKeyPair();
+            console.log("Generated Key Pair:", keyPair);
+            return `Private Key: ${keyPair.privateKey.toString()}<br>
+                        Public Key: ${keyPair.publicKey.toString()}`;
+          });
+
+          await runTest("Message Signing", async () => {
+            const keyPair = SmartLedger.generateKeyPair();
+            const message = "Test message for signing";
+            const privateKeyString = keyPair.privateKey.toString();
+            const publicKeyString = keyPair.publicKey.toString();
+
+            console.log("Signing Key Pair:", {
+              privateKey: privateKeyString,
+              publicKey: publicKeyString,
+            });
+
+            const signature = await SmartLedger.signMessage(
+              message,
+              privateKeyString
+            );
+            const isValid = await SmartLedger.verifySignature(
+              message,
+              signature,
+              publicKeyString
+            );
+
+            if (!isValid) throw new Error("Signature verification failed");
+
+            return `Message: "${message}"<br>
+                        Private Key: "${privateKeyString}"<br>
+                        Public Key: "${publicKeyString}"<br>
+                        Signature: ${signature}<br>
+                        Verification: ${isValid ? "Valid ✓" : "Invalid ✗"}`;
+          });
+
+          await runTest("Message Signing with Derived Keys", async () => {
+            const mnemonic = SmartLedger.generateMnemonic();
+            const message = "Test message for derived key signing";
+            const identityPath = "m/44'/236'/0'/0/0"; // Identity key path
+
+            // First derive the key to check the format
+            const derived = await SmartLedger.derivePath(
+              mnemonic,
+              identityPath
+            );
+            console.log("Derived key details:", {
+              path: derived.path,
+              wif: derived.wif,
+              publicKey: derived.publicKey,
+              privateKey: derived.privateKey,
+            });
+
+            // First try signing with WIF
+            let signature;
+            try {
+              signature = await SmartLedger.signMessage(message, derived.wif);
+              console.log("Generated signature:", signature);
+            } catch (error) {
+              console.error("Signing error:", error);
+              throw error;
+            }
+
+            // Then try verification
+            let isValid;
+            try {
+              isValid = await SmartLedger.verifySignature(
+                message,
+                signature,
+                derived.publicKey
+              );
+              console.log("Verification result:", isValid);
+            } catch (error) {
+              console.error("Verification error:", error);
+              throw error;
+            }
+
+            if (!isValid)
+              throw new Error("Derived key signature verification failed");
+
+            return `Message: "${message}"<br>
+                        Derived Path: "${identityPath}"<br>
+                        WIF: "${derived.wif}"<br>
+                        Public Key: "${derived.publicKey}"<br>
+                        Signature: ${signature}<br>
+                        Verification: ${isValid ? "Valid ✓" : "Invalid ✗"}`;
+          });
+
+          await runTest("Random Bytes Generation", () => {
+            const random16 = SmartLedger.getRandomBytes(16);
+            const random32 = SmartLedger.getRandomBytes(32);
+            return `16 Bytes: ${random16}<br>32 Bytes: ${random32}`;
+          });
+
+          await runTest("Shamir Secret Sharing", () => {
+            const secret = "My secret message";
+            const shares = SmartLedger.splitSecret(secret, 3, 2);
+            const reconstructed = SmartLedger.combineShares(shares.slice(0, 2));
+            if (reconstructed !== secret)
+              throw new Error("Reconstructed secret doesn't match original");
+            return `Original Secret: "${secret}"<br>
+                        Number of Shares: ${shares.length}<br>
+                        Share 1: "${shares[0].substring(0, 30)}..."<br>
+                        Share 2: "${shares[1].substring(0, 30)}..."<br>
+                        Share 3: "${shares[2].substring(0, 30)}..."<br>
+                        Reconstructed (with 2 shares): "${reconstructed}"`;
+          });
+
+          await runTest("Key Validation", () => {
+            const keyPair = SmartLedger.generateKeyPair();
+            const isValidPrivate = SmartLedger.isValidPrivateKey(
+              keyPair.privateKey.toString()
+            );
+            const isValidPublic = SmartLedger.isValidPublicKey(
+              keyPair.publicKey.toString()
+            );
+            return `Private Key Valid: ${isValidPrivate ? "✓" : "✗"}<br>
+                        Public Key Valid: ${isValidPublic ? "✓" : "✗"}`;
+          });
+
+          await runTest("Secure Storage", async () => {
+            // Generate test data
+            const mnemonic = SmartLedger.generateMnemonic();
+            const keyPair = SmartLedger.generateKeyPair();
+            const storageKey = "test-storage-key";
+
+            // Store mnemonic
+            SmartLedger.storeMnemonic(
+              "test1",
+              mnemonic,
+              { label: "Test Mnemonic" },
+              storageKey
+            );
+
+            // Store private key
+            SmartLedger.storeKey(
+              "test2",
+              keyPair.privateKey.toString(),
+              {
+                label: "Test Private Key",
+              },
+              storageKey
+            );
+
+            // List stored items
+            const storedItems = SmartLedger.listKeys();
+
+            // Retrieve stored items
+            const retrievedMnemonic = SmartLedger.retrieveMnemonic(
+              "test1",
+              storageKey
+            );
+            const retrievedKey = SmartLedger.retrieveKey("test2", storageKey);
+
+            // Verify retrievals
+            if (retrievedMnemonic.mnemonic !== mnemonic) {
+              throw new Error("Mnemonic retrieval verification failed");
+            }
+            if (retrievedKey.key !== keyPair.privateKey.toString()) {
+              throw new Error("Key retrieval verification failed");
+            }
+
+            return `
+        Stored Items: ${storedItems.length}<br>
+        Retrieved Mnemonic Valid: ✓<br>
+        Retrieved Key Valid: ✓<br>
+        Storage Test Complete
+    `;
+          });
+
+          // Display summary and results
+          summary.innerHTML = `
+                    <h3>Test Summary</h3>
+                    <p>Total Tests: ${successCount + failureCount}</p>
+                    <p class="success">Passed: ${successCount}</p>
+                    <p class="error">Failed: ${failureCount}</p>
+                `;
+
+          results.innerHTML = `
+                    <h3>Detailed Results:</h3>
+                    ${testResults.join("\n")}
+                `;
+        } catch (error) {
+          console.error("Test suite error:", error);
+          results.innerHTML = `
+                    <div class="test-section">
+                        <p class="error">❌ Test suite failed: ${error.message}</p>
+                    </div>
+                `;
+        }
+      })();
+    </script>
+  </body>
+</html>
