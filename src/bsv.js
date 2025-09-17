@@ -1,31 +1,33 @@
 // smartledger-sdk/src/bsv.js
 
-const { PrivKey, PubKey, KeyPair, Address, Bsm } = require('bsv');
+const sdk = require('@bsv/sdk');
+const { PrivateKey, PublicKey, SignedMessage, Utils } = sdk;
 
 function generateKeyPair() {
-  const privKey = PrivKey.fromRandom();
-  const pubKey = PubKey.fromPrivKey(privKey);
-  return { privateKey: privKey, publicKey: pubKey };
+  const privateKey = PrivateKey.fromRandom();
+  const publicKey = privateKey.toPublicKey();
+  return { privateKey, publicKey };
 }
 
-async function signMessage(message, privateKey) {
-  const key = PrivKey.fromString(privateKey);
-  const keyPair = KeyPair.fromPrivKey(key);
-  const messageBuffer = Buffer.from(message);
-  const signature = Bsm.sign(messageBuffer, keyPair);
-  return signature;
+function signMessage(message, privateKey, recipientPubKey = null) {
+  const messageBytes = Utils.toArray(message, 'utf8');
+  if (recipientPubKey) {
+    return SignedMessage.sign(messageBytes, privateKey, recipientPubKey);
+  }
+  return SignedMessage.sign(messageBytes, privateKey);
 }
 
-async function verifySignature(message, signature, publicKey) {
-  const pubKey = PubKey.fromString(publicKey);
-  const address = Address.fromPubKey(pubKey);
-  const messageBuffer = Buffer.from(message);
-  return Bsm.verify(messageBuffer, signature, address);
+function verifySignature(message, signature, verifierKey = null) {
+  const messageBytes = Utils.toArray(message, 'utf8');
+  if (verifierKey) {
+    return SignedMessage.verify(messageBytes, signature, verifierKey);
+  }
+  return SignedMessage.verify(messageBytes, signature);
 }
 
 function isValidPrivateKey(privateKey) {
   try {
-    PrivKey.fromString(privateKey);
+    PrivateKey.fromString(privateKey);
     return true;
   } catch (e) {
     return false;
@@ -34,7 +36,7 @@ function isValidPrivateKey(privateKey) {
 
 function isValidPublicKey(publicKey) {
   try {
-    PubKey.fromString(publicKey);
+    PublicKey.fromString(publicKey);
     return true;
   } catch (e) {
     return false;

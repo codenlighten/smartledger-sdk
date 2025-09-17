@@ -1,36 +1,33 @@
 // smartledger-sdk/src/wallet.js
 
-const { Bip39, Bip32, PrivKey, PubKey } = require('bsv');
+const sdk = require('@bsv/sdk');
+const { Mnemonic, HD } = sdk;
 
 function generateMnemonic() {
-  // Explicitly request 256 bits for a 24-word mnemonic
-  return Bip39.fromRandom(256).toString();
+  const mnemonic = Mnemonic.fromRandom();
+  return mnemonic.toString();
 }
 
 function validateMnemonic(mnemonic) {
-  return Bip39.fromString(mnemonic).isValid();
+  return Mnemonic.isValid(mnemonic);
 }
 
 async function mnemonicToSeedHex(mnemonic, passphrase = '') {
-  const bip39 = Bip39.fromString(mnemonic);
-  const seed = await bip39.toSeed(passphrase);
+  const mnemonicObj = Mnemonic.fromString(mnemonic);
+  const seed = await mnemonicObj.toSeed(passphrase);
   return seed.toString('hex');
 }
 
 async function derivePath(mnemonic, path) {
-  const bip39 = Bip39.fromString(mnemonic);
-  const seed = await bip39.toSeed();
-  const master = Bip32.fromSeed(seed);
+  const seed = await Mnemonic.fromString(mnemonic).toSeed();
+  const master = HD.fromSeed(seed);
   const child = master.derive(path);
-
-  const privKey = child.privKey;
-  const pubKey = PubKey.fromPrivKey(privKey);
 
   return {
     path: path,
-    privateKey: privKey.toString(),
-    publicKey: pubKey.toString(),
-    wif: privKey.toWif(),
+    privateKey: child.privKey, // Return the object, not the string
+    publicKey: child.pubKey,   // Return the object, not the string
+    wif: child.privKey.toWif(),
   };
 }
 

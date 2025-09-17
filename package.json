@@ -1,6 +1,6 @@
 {
   "name": "smartledger-sdk",
-  "version": "1.1.17",
+  "version": "1.2.0",
   "description": "A JavaScript SDK for interacting with the SmartLedger.",
   "main": "dist/smartledger.js",
   "files": [
@@ -20,12 +20,11 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "bsv": "^2.0.0",
+    "@bsv/sdk": "^1.1.4",
     "crypto-js": "^4.1.1",
     "uuid": "^9.0.0",
     "secrets.js-grempe": "^2.0.0"
   },
   "devDependencies": {
     "browserify": "^17.0.0"
-  }
-}
+  }}

@@ -144,8 +144,8 @@
             return `
         Mnemonic: "${mnemonic}"<br>
         Single Path (m/44'/236'/0'/0/0):<br>
-        - Private Key: "${derived.privateKey.substring(0, 20)}..."<br>
-        - Public Key: "${derived.publicKey.substring(0, 20)}..."<br>
+        - Private Key: "${derived.privateKey.toString().substring(0, 20)}..."<br>
+        - Public Key: "${derived.publicKey.toString().substring(0, 20)}..."<br>
         - WIF: "${derived.wif}"<br>
         <br>
         Total Derived Paths: ${paths.length}<br>
@@ -187,84 +187,38 @@
           });
 
           await runTest("Message Signing", async () => {
-            const keyPair = SmartLedger.generateKeyPair();
+            const { privateKey, publicKey } = SmartLedger.generateKeyPair();
             const message = "Test message for signing";
-            const privateKeyString = keyPair.privateKey.toString();
-            const publicKeyString = keyPair.publicKey.toString();
 
-            console.log("Signing Key Pair:", {
-              privateKey: privateKeyString,
-              publicKey: publicKeyString,
-            });
-
-            const signature = await SmartLedger.signMessage(
-              message,
-              privateKeyString
-            );
-            const isValid = await SmartLedger.verifySignature(
-              message,
-              signature,
-              publicKeyString
-            );
+            const signature = await SmartLedger.signMessage(message, privateKey);
+            const isValid = await SmartLedger.verifySignature(message, signature, publicKey);
 
             if (!isValid) throw new Error("Signature verification failed");
 
             return `Message: "${message}"<br>
-                        Private Key: "${privateKeyString}"<br>
-                        Public Key: "${publicKeyString}"<br>
-                        Signature: ${signature}<br>
+                        Private Key: "${privateKey.toString()}"<br>
+                        Public Key: "${publicKey.toString()}"<br>
+                        Signature: [Signature Object]<br>
                         Verification: ${isValid ? "Valid ✓" : "Invalid ✗"}`;
           });
 
           await runTest("Message Signing with Derived Keys", async () => {
             const mnemonic = SmartLedger.generateMnemonic();
             const message = "Test message for derived key signing";
-            const identityPath = "m/44'/236'/0'/0/0"; // Identity key path
+            const identityPath = "m/44'/236'/0'/0/0";
 
-            // First derive the key to check the format
-            const derived = await SmartLedger.derivePath(
-              mnemonic,
-              identityPath
-            );
-            console.log("Derived key details:", {
-              path: derived.path,
-              wif: derived.wif,
-              publicKey: derived.publicKey,
-              privateKey: derived.privateKey,
-            });
+            const { privateKey, publicKey, wif } = await SmartLedger.derivePath(mnemonic, identityPath);
 
-            // First try signing with WIF
-            let signature;
-            try {
-              signature = await SmartLedger.signMessage(message, derived.wif);
-              console.log("Generated signature:", signature);
-            } catch (error) {
-              console.error("Signing error:", error);
-              throw error;
-            }
+            const signature = await SmartLedger.signMessage(message, privateKey);
+            const isValid = await SmartLedger.verifySignature(message, signature, publicKey);
 
-            // Then try verification
-            let isValid;
-            try {
-              isValid = await SmartLedger.verifySignature(
-                message,
-                signature,
-                derived.publicKey
-              );
-              console.log("Verification result:", isValid);
-            } catch (error) {
-              console.error("Verification error:", error);
-              throw error;
-            }
-
-            if (!isValid)
-              throw new Error("Derived key signature verification failed");
+            if (!isValid) throw new Error("Derived key signature verification failed");
 
             return `Message: "${message}"<br>
                         Derived Path: "${identityPath}"<br>
-                        WIF: "${derived.wif}"<br>
-                        Public Key: "${derived.publicKey}"<br>
-                        Signature: ${signature}<br>
+                        WIF: "${wif}"<br>
+                        Public Key: "${publicKey.toString()}"<br>
+                        Signature: [Signature Object]<br>
                         Verification: ${isValid ? "Valid ✓" : "Invalid ✗"}`;
           });
 
